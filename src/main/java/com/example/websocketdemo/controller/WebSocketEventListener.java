@@ -1,5 +1,6 @@
 package com.example.websocketdemo.controller;
 
+import com.example.websocketdemo.common.WebSocketConstant;
 import com.example.websocketdemo.model.ChatMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,9 +11,12 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
+import org.springframework.web.socket.messaging.SessionSubscribeEvent;
 
 /**
- * Created by rajeevkumarsingh on 25/07/17.
+ * 1. event 的种类： https://stackoverflow.com/questions/21781667/how-to-capture-connection-event-in-my-websocket-server-with-spring-4
+ * 2. 不同的event是通过参数来区分的，而不是方法名
+ * 3. 先handshake  后 handleWebSocketConnectListener
  */
 @Component
 public class WebSocketEventListener {
@@ -29,9 +33,12 @@ public class WebSocketEventListener {
 
     @EventListener
     public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
-        StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
+        StompHeaderAccessor sha = StompHeaderAccessor.wrap(event.getMessage());
 
-        String username = (String) headerAccessor.getSessionAttributes().get("username");
+        Object sessionId = sha.getSessionAttributes().get(WebSocketConstant.WS_SESSION);
+        sha.getSessionAttributes().remove(WebSocketConstant.WS_SESSION);
+
+        String username = (String) sha.getSessionAttributes().get("username");
         if(username != null) {
             logger.info("User Disconnected : " + username);
 
@@ -41,5 +48,10 @@ public class WebSocketEventListener {
 
             messagingTemplate.convertAndSend("/topic/public", chatMessage);
         }
+    }
+
+    @EventListener
+    public void handleSessionSubscribeListener(SessionSubscribeEvent event){
+        logger.info("subscribe event");
     }
 }
